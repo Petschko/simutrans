@@ -14,6 +14,7 @@
 
 #include "dataobj/loadsave.h"
 #include "dataobj/environment.h"
+#include "dataobj/pakset_manager.h"
 #include "player/simplay.h"
 #include "utils/simstring.h"
 #include "tpl/slist_tpl.h"
@@ -23,9 +24,14 @@
 
 #define MAX_SAVED_MESSAGES (2000)
 
-karte_ptr_t message_t::welt;
+static karte_ptr_t welt;
 
-void message_t::node::rdwr(loadsave_t *file)
+uint32 message_node_t::get_type_shifted() const
+{
+	return 1<<(type & message_t::MESSAGE_TYPE_MASK);
+}
+
+void message_node_t::rdwr(loadsave_t *file)
 {
 	file->rdwr_str( msg, lengthof(msg) );
 	file->rdwr_long( type );
@@ -64,7 +70,7 @@ void message_t::node::rdwr(loadsave_t *file)
 }
 
 
-FLAGGED_PIXVAL message_t::node::get_player_color(karte_t *welt) const
+FLAGGED_PIXVAL message_node_t::get_player_color(karte_t *welt) const
 {
 	// correct for player color
 	FLAGGED_PIXVAL colorval = color;
@@ -73,6 +79,26 @@ FLAGGED_PIXVAL message_t::node::get_player_color(karte_t *welt) const
 		colorval = player ? PLAYER_FLAG+color_idx_to_rgb(player->get_player_color1()+env_t::gui_player_color_dark) : color_idx_to_rgb(MN_GREY0);
 	}
 	return colorval;
+}
+
+
+void message_node_t::open_msg_window(bool open_as_autoclose) const
+{
+	// show window with the complete warning
+	if (strcmp(msg, pakset_manager_t::get_doubled_warning_message()) == 0) {
+		pakset_manager_t::open_doubled_warning_window();
+		return;
+	}
+	// message window again
+	news_window* news;
+	if(  pos==koord3d::invalid  ) {
+		news = new news_img( msg, image, get_player_color(welt) );
+	}
+	else {
+		news = new news_loc( msg, pos, get_player_color(welt) );
+	}
+
+	create_win(news, open_as_autoclose ? w_time_delete /* autoclose window */ : w_info /* normal window */, magic_none);
 }
 
 
@@ -148,8 +174,8 @@ DBG_MESSAGE("message_t::add_msg()","%40s (at %i,%i,%i)", text, pos.x, pos.y, pos
 	if(  what_bit == (1<<traffic_jams)  ) {
 		sint32 now = welt->get_current_month()-2;
 		uint32 i = 0;
-		for(node* const iter : list) {
-			node const& n = *iter;
+		for(message_node_t* const iter : list) {
+			message_node_t const& n = *iter;
 			if (n.time >= now &&
 					strcmp(n.msg, text) == 0 &&
 					(n.pos.x & 0xFFF0) == (pos.x & 0xFFF0) && // positions need not 100% match ...
@@ -164,8 +190,8 @@ DBG_MESSAGE("message_t::add_msg()","%40s (at %i,%i,%i)", text, pos.x, pos.y, pos
 	// filter out AI messages for a similar area to recent activity messages
 	if(  what_bit == (1<<ai)  &&  pos != koord3d::invalid  &&  env_t::networkmode  ) {
 		uint32 i = 0;
-		for(node* const iter : list) {
-			node const& n = *iter;
+		for(message_node_t* const iter : list) {
+			message_node_t const& n = *iter;
 			if ((n.pos.x & 0xFFE0) == (pos.x & 0xFFE0) &&
 				(n.pos.y & 0xFFE0) == (pos.y & 0xFFE0)) {
 				return;
@@ -181,7 +207,7 @@ DBG_MESSAGE("message_t::add_msg()","%40s (at %i,%i,%i)", text, pos.x, pos.y, pos
 	}
 
 	// we do not allow messages larger than 256 bytes
-	node *const n = new node();
+	message_node_t *const n = new message_node_t();
 
 	tstrncpy(n->msg, text, lengthof(n->msg));
 	n->type = what_flags;
@@ -190,15 +216,13 @@ DBG_MESSAGE("message_t::add_msg()","%40s (at %i,%i,%i)", text, pos.x, pos.y, pos
 	n->time = welt->get_current_month();
 	n->image = image;
 
-	FLAGGED_PIXVAL colorval = n->get_player_color(welt);
 	// should we send this message to a ticker?
 	if(  what_bit&ticker_flags  ) {
-		ticker::add_msg(text, pos, colorval);
+		ticker::add_msg_node(*n);
 	}
 
 	// insert at the top
 	list.insert(n);
-	char* p = list.front()->msg;
 
 	// if we are not current player, do not open windows
 	if(  (what_bit&(1<<ai))==0  &&   (color & PLAYER_FLAG) != 0  &&  welt->get_active_player_nr() != (color&(~PLAYER_FLAG))  ) {
@@ -209,16 +233,7 @@ DBG_MESSAGE("message_t::add_msg()","%40s (at %i,%i,%i)", text, pos.x, pos.y, pos
 
 	// should we open a window?
 	if (  what_bit & (auto_win_flags | win_flags)  ) {
-		news_window* news;
-		if (pos == koord3d::invalid) {
-			news = new news_img(p, image, colorval);
-		}
-		else {
-			news = new news_loc(p, pos, colorval);
-		}
-		wintype w_t = what_bit & win_flags ? w_info /* normal window */ : w_time_delete /* autoclose window */;
-
-		create_win(  news, w_t, magic_none );
+		n->open_msg_window( (what_bit & win_flags)==0 );
 	}
 
 	// restore focus
@@ -255,7 +270,7 @@ koord3d message_t::get_coord_from_text(const char* text)
 
 void message_t::rotate90( sint16 size_w )
 {
-	for(node* const i : list) {
+	for(message_node_t* const i : list) {
 		i->pos.rotate90(size_w);
 	}
 }
@@ -269,14 +284,14 @@ void message_t::rdwr( loadsave_t *file )
 		if( env_t::server ) {
 			// do not save local messages and expired messages
 			uint32 current_time = world()->get_current_month();
-			for(node* const i : list) {
+			for(message_node_t* const i : list) {
 				if( i->type & do_not_rdwr_flag  ||  (i->type & expire_after_one_month_flag  &&  current_time - i->time > 1)  ) {
 					continue;
 				}
 				if (++msg_count == MAX_SAVED_MESSAGES) break;
 			}
 			file->rdwr_short( msg_count );
-			for(node* const i : list) {
+			for(message_node_t* const i : list) {
 				if (msg_count == 0) break;
 				if(  i->type & do_not_rdwr_flag  || (i->type & expire_after_one_month_flag  &&  current_time - i->time > 1)  ) {
 					continue;
@@ -287,13 +302,13 @@ void message_t::rdwr( loadsave_t *file )
 		}
 		else {
 			// do not save discardable messages (like changing player)
-			for(node* const i : list) {
+			for(message_node_t* const i : list) {
 				if (!(i->type & do_not_rdwr_flag)) {
 					if (++msg_count == MAX_SAVED_MESSAGES) break;
 				}
 			}
 			file->rdwr_short( msg_count );
-			for(node* const i : list) {
+			for(message_node_t* const i : list) {
 				if (msg_count == 0) break;
 				if(  !(i->type & do_not_rdwr_flag)  ) {
 					i->rdwr(file);
@@ -307,7 +322,7 @@ void message_t::rdwr( loadsave_t *file )
 		clear();
 		file->rdwr_short(msg_count);
 		while(  (msg_count--)>0  ) {
-			node *n = new node();
+			message_node_t *n = new message_node_t();
 			n->rdwr(file);
 			list.append(n);
 		}

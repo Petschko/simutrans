@@ -41,7 +41,6 @@
 #include "../dataobj/marker.h"
 #include "../dataobj/translator.h"
 #include "../dataobj/scenario.h"
-#include "../dataobj/pakset_manager.h"
 
 #include "../utils/simrandom.h"
 
@@ -118,7 +117,6 @@ bool way_builder_t::successfully_loaded()
 bool way_builder_t::register_desc(way_desc_t *desc)
 {
 	if(  const way_desc_t *old_desc = desc_table.remove(desc->get_name())  ) {
-		pakset_manager_t::doubled( "way", desc->get_name() );
 		tool_t::general_tool.remove( old_desc->get_builder() );
 		delete old_desc->get_builder();
 		delete old_desc;
@@ -148,7 +146,7 @@ const vector_tpl<const way_desc_t *>&  way_builder_t::get_way_list(const waytype
 	const uint16 time = welt->get_timeline_year_month();
 	for(auto const& i : desc_table) {
 		way_desc_t const* const test = i.value;
-		if( test->get_wtyp()==wtyp  &&  test->get_styp()== styp  &&  test->is_available(time)  &&  test->get_builder() ) {
+		if (test->get_wtyp()==wtyp  &&  test->get_styp()== styp  &&  test->is_available(time)  &&  test->get_builder()) {
 			dummy.append(test);
 		}
 	}
@@ -508,6 +506,10 @@ bool way_builder_t::is_allowed_step(const grund_t *from, const grund_t *to, sint
 	static monorailboden_t to_dummy(koord3d::invalid, slope_t::flat);
 	static monorailboden_t from_dummy(koord3d::invalid, slope_t::flat);
 
+	if (desc == NULL) {
+		return false;
+	}
+
 	if(bautyp==luft  &&  (from->get_grund_hang()+to->get_grund_hang()!=0  ||  (from->hat_wege()  &&  from->hat_weg(air_wt)==0)  ||  (to->hat_wege()  &&  to->hat_weg(air_wt)==0))) {
 		// absolutely no slopes for runways, neither other ways
 		return false;
@@ -600,7 +602,7 @@ bool way_builder_t::is_allowed_step(const grund_t *from, const grund_t *to, sint
 				to = &to_dummy;
 			}
 
-			pos = from->get_pos() + koord3d( 0, 0, env_t::pak_height_conversion_factor );
+			pos = from->get_pos() + koord3d( 0, 0, welt->get_settings().get_way_height_clearance() );
 			grund_t *from2 = welt->lookup(pos);
 			if(from2) {
 				from = from2;

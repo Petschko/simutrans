@@ -225,7 +225,7 @@ void interaction_t::interactive_event( const event_t &ev )
 			// first check for visibility etc (needs already right flags)
 			const char *err = tool->check_pos( player, pos );
 			if (err==NULL) {
-				err = world->call_work_api(tool, player, pos, suspended, false);
+				err = world->call_work_api(tool, player, pos, suspended);
 			}
 			if (!suspended) {
 				// play sound / error message
@@ -369,11 +369,6 @@ void interaction_t::check_events()
 {
 	event_t ev;
 
-	bool const set_rmode_interactive = env_t::networkmode;
-	if (set_rmode_interactive) {
-		set_random_mode( INTERACTIVE_RANDOM );
-	}
-
 	win_poll_event(&ev);
 
 	event_t deferred_ev;
@@ -398,10 +393,6 @@ void interaction_t::check_events()
 
 			if (process_event(ev)) {
 				// We have been asked to stop processing, exit.
-				// but clear random mode flag first
-				if(  set_rmode_interactive  ) {
-					clear_random_mode( INTERACTIVE_RANDOM );
-				}
 				return;
 			}
 		}
@@ -413,10 +404,6 @@ void interaction_t::check_events()
 		// process pending drag events
 		process_event(deferred_ev);
 		deferred_ev.ev_class = EVENT_NONE;
-	}
-
-	if(  set_rmode_interactive  ) {
-		clear_random_mode( INTERACTIVE_RANDOM );
 	}
 }
 

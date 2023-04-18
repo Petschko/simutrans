@@ -19,12 +19,14 @@
 #include "../../dataobj/scenario.h"
 #include "../../descriptor/ground_desc.h"
 #include "../../obj/baum.h"
+#include "../../obj/bruecke.h"
 #include "../../obj/gebaeude.h"
 #include "../../obj/field.h"
 #include "../../obj/label.h"
 #include "../../obj/leitung2.h"
 #include "../../obj/roadsign.h"
 #include "../../obj/signal.h"
+#include "../../obj/tunnel.h"
 #include "../../obj/wayobj.h"
 #include "../../player/simplay.h"
 
@@ -185,6 +187,8 @@ getpush_obj_pos(weg_t, obj_t::way);
 getpush_obj_pos(leitung_t, obj_t::leitung);
 getpush_obj_pos(field_t, obj_t::field);
 getpush_obj_pos(wayobj_t, obj_t::wayobj);
+getpush_obj_pos(bruecke_t, obj_t::bruecke);
+getpush_obj_pos(tunnel_t, obj_t::tunnel);
 
 namespace script_api {
 	// each depot has its own class
@@ -261,6 +265,8 @@ SQInteger script_api::param<obj_t*>::push(HSQUIRRELVM vm, obj_t* const& obj)
 		case_resolve_obj(senke_t);
 
 		case_resolve_obj(wayobj_t);
+		case_resolve_obj(bruecke_t);
+		case_resolve_obj(tunnel_t);
 		default:
 			return access_objs<obj_t>::push_with_pos(vm, obj);
 	}
@@ -282,6 +288,23 @@ static SQInteger get_way_ribi(HSQUIRRELVM vm)
 	return param<my_ribi_t>::push(vm, ribi);
 }
 
+
+template<class D>
+SQInteger map_obj_to_string(HSQUIRRELVM vm) // parameters: obj
+{
+	static cbuffer_t buf;
+	buf.clear();
+	koord3d pos = script_api::param<koord3d>::get(vm, 1);
+	D* obj = script_api::param<D*>::get(vm, 1);
+	buf.printf("%s@%s", script_api::param<D*>::squirrel_type(), pos.get_str());
+	if (obj == NULL) {
+		buf.append(" [invalid]");
+	}
+	sq_pushstring(vm, (const char*)buf, -1);
+	return 1;
+}
+
+
 // create class
 template<class D>
 void begin_obj_class(HSQUIRRELVM vm, const char* name, const char* base = NULL)
@@ -297,6 +320,8 @@ void begin_obj_class(HSQUIRRELVM vm, const char* name, const char* base = NULL)
 	sq_settypetag(vm, -1, obj_t_tag + objtype);
 	// export constructor
 	register_function_fv(vm, exp_obj_pos_constructor, "constructor", 4, "xiiii", freevariable<uint8>(objtype));
+	// export _tostring method
+	register_function(vm, map_obj_to_string<D>, "_tostring", 1, "x");
 	// now functions can be registered
 }
 
@@ -459,7 +484,7 @@ void export_map_objects(HSQUIRRELVM vm)
 	 * Class to access objects on the map
 	 * These classes cannot modify anything.
 	 */
-	begin_class(vm, "map_object_x", "extend_get,coord3d,ingame_object");
+	begin_class(vm, "map_object_x", "coord3d,extend_get,ingame_object");
 	uint8 objtype = bind_code<obj_t>::objtype;
 	sq_settypetag(vm, -1, obj_t_tag + objtype);
 	/**
@@ -773,5 +798,25 @@ void export_map_objects(HSQUIRRELVM vm)
 	 * @returns object descriptor.
 	 */
 	register_method(vm, &wayobj_t::get_desc, "get_desc");
+	end_class(vm);
+
+	/**
+	 * Bridges: bridge objects of bridge ramps and tiles
+	 */
+	begin_obj_class<bruecke_t>(vm, "bridge_x", "map_object_x");
+	/**
+	 * @returns object descriptor.
+	 */
+	register_method(vm, &bruecke_t::get_desc, "get_desc");
+	end_class(vm);
+
+	/**
+	 * Tunnels
+	 */
+	begin_obj_class<tunnel_t>(vm, "tunnel_x", "map_object_x");
+	/**
+	 * @returns object descriptor.
+	 */
+	register_method(vm, &tunnel_t::get_desc, "get_desc");
 	end_class(vm);
 }

@@ -16,7 +16,6 @@
 #include "../tool/simtool.h"
 
 #include "../descriptor/tunnel_desc.h"
-#include "../dataobj/pakset_manager.h"
 
 #include "../ground/tunnelboden.h"
 
@@ -46,7 +45,6 @@ void tunnel_builder_t::register_desc(tunnel_desc_t *desc)
 {
 	// avoid duplicates with same name
 	if( const tunnel_desc_t *old_desc = tunnel_by_name.remove(desc->get_name()) ) {
-		pakset_manager_t::doubled( "tunnel", desc->get_name() );
 		tool_t::general_tool.remove( old_desc->get_builder() );
 		delete old_desc->get_builder();
 		// we cannot delete old_desc, since then xref-resolving will crash
@@ -138,7 +136,7 @@ const vector_tpl<const tunnel_desc_t *>& tunnel_builder_t::get_available_tunnels
 	const uint16 time = welt->get_timeline_year_month();
 	for(auto const& i : tunnel_by_name) {
 		tunnel_desc_t const* const b = i.value;
-		if (  b->get_waytype()==wtyp  &&  b->is_available(time)  ) {
+		if (b->get_waytype()==wtyp  &&  b->is_available(time)  &&  b->get_builder()) {
 			dummy.append(b);
 		}
 	}
@@ -169,7 +167,7 @@ koord3d tunnel_builder_t::find_end_pos(player_t *player, koord3d pos, koord zv, 
 		gr = welt->lookup_kartenboden(pos.get_2d());
 
 		// steep slopes and we are appearing at the top of one
-		if(  gr->get_hoehe() == pos.z-1  &&  env_t::pak_height_conversion_factor==1  ) {
+		if(  gr->get_hoehe() == pos.z-1  &&  welt->get_settings().get_way_height_clearance()==1  ) {
 			const slope_t::type new_slope = slope_type(-zv);
 			sint8 hsw = pos.z + corner_sw(new_slope);
 			sint8 hse = pos.z + corner_se(new_slope);
@@ -217,7 +215,7 @@ koord3d tunnel_builder_t::find_end_pos(player_t *player, koord3d pos, koord zv, 
 				gr = NULL;
 			}
 
-			if(  !gr  &&  env_t::pak_height_conversion_factor==2  ) {
+			if(  !gr  &&  welt->get_settings().get_way_height_clearance()==2  ) {
 				// check for one above
 				gr = welt->lookup(pos + koord3d(0,0,1));
 			}
@@ -360,7 +358,7 @@ const char *tunnel_builder_t::build( player_t *player, koord pos, const tunnel_d
 /************************************** FIX ME ***************************************************
 ********************** THIS MUST BE RATHER A PROPERTY OF THE TUNNEL IN QUESTION ! ****************/
 	// for conversion factor 1, must be single height, for conversion factor 2, must be double
-	if(  (env_t::pak_height_conversion_factor == 1  &&  !is_one_high(slope))  ||  (env_t::pak_height_conversion_factor == 2  &&  is_one_high(slope))  ) {
+	if(  (welt->get_settings().get_way_height_clearance() == 1  &&  !is_one_high(slope))  ||  (welt->get_settings().get_way_height_clearance() == 2  &&  is_one_high(slope))  ) {
 		return "Tunnel muss an\neinfachem\nHang beginnen!\n";
 	}
 
@@ -407,7 +405,7 @@ const char *tunnel_builder_t::build( player_t *player, koord pos, const tunnel_d
 
 	// Begin and end found, we can build
 
-	slope_t::type end_slope = slope_type(-zv) * env_t::pak_height_conversion_factor;
+	slope_t::type end_slope = slope_type(-zv) * welt->get_settings().get_way_height_clearance();
 	if(  full_tunnel  &&  (!end_gr  ||  end_gr->get_grund_hang()!=end_slope)  ) {
 		// end slope not at correct height - we have already checked in find_end_pos that we can change this
 		sint8 hsw = end.z + corner_sw(end_slope);

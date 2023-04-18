@@ -13,7 +13,6 @@
 #include "../ground/grund.h"
 #include "../dataobj/loadsave.h"
 #include "../dataobj/translator.h"
-#include "../dataobj/pakset_manager.h"
 
 #include "../utils/cbuffer.h"
 #include "../descriptor/pedestrian_desc.h"
@@ -31,8 +30,8 @@ stringhashtable_tpl<const pedestrian_desc_t *> pedestrian_t::table;
 
 bool pedestrian_t::register_desc(const pedestrian_desc_t *desc)
 {
-	if(  table.remove(desc->get_name())  ) {
-		pakset_manager_t::doubled( "pedestrian", desc->get_name() );
+	if(const pedestrian_desc_t* old = table.remove(desc->get_name())  ) {
+		delete old;
 	}
 	table.put(desc->get_name(), desc);
 	return true;
@@ -197,7 +196,7 @@ void pedestrian_t::generate_pedestrians_at(grund_t *bd, int &count)
 
 	// allow also pedestrians on any road including crossings
 	// the complex bus center in front of the station is almost empty ...
-	if (bd->get_weg(road_wt)) {
+	if (bd->get_weg_ribi(road_wt)) {
 
 		// we create maximal 4 pedestrians here for performance reasons
 		for (int i = 0; i < 4 && count > 0; i++) {
@@ -207,7 +206,7 @@ void pedestrian_t::generate_pedestrians_at(grund_t *bd, int &count)
 			}
 
 			pedestrian_t* fg = new pedestrian_t(bd);
-			if (bd->obj_add(fg) != 0) {
+			if (fg->time_to_life > 0  &&  bd->obj_add(fg) != 0) {
 				fg->calc_height(bd);
 				uint32 separate_pedestrians = (bd->get_top()*23) << YARDS_PER_VEHICLE_STEP_SHIFT;
 				// walk a little

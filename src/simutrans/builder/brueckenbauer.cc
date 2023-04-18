@@ -31,7 +31,6 @@
 #include "../obj/pillar.h"
 #include "../obj/signal.h"
 #include "../dataobj/crossing_logic.h"
-#include "../dataobj/pakset_manager.h"
 
 #include "../tpl/stringhashtable_tpl.h"
 #include "../tpl/vector_tpl.h"
@@ -48,7 +47,6 @@ void bridge_builder_t::register_desc(bridge_desc_t *desc)
 {
 	// avoid duplicates with same name
 	if(  const bridge_desc_t *old_desc = desc_table.remove(desc->get_name())  ) {
-		pakset_manager_t::doubled( "bridge", desc->get_name() );
 		tool_t::general_tool.remove( old_desc->get_builder() );
 		delete old_desc->get_builder();
 		delete old_desc;
@@ -134,7 +132,7 @@ const vector_tpl<const bridge_desc_t *>&  bridge_builder_t::get_available_bridge
 	const uint16 time = welt->get_timeline_year_month();
 	for(auto const& i : desc_table) {
 		bridge_desc_t const* const b = i.value;
-		if (  b->get_waytype()==wtyp  &&  b->is_available(time)  ) {
+		if (b->get_waytype()==wtyp  &&  b->is_available(time)  &&  b->get_builder()) {
 			dummy.append(b);
 		}
 	}

@@ -24,7 +24,6 @@
 #include "../dataobj/translator.h"
 #include "../dataobj/loadsave.h"
 #include "../dataobj/environment.h"
-#include "../dataobj/pakset_manager.h"
 
 #include "../obj/crossing.h"
 #include "../obj/roadsign.h"
@@ -66,6 +65,7 @@ road_user_t::~road_user_t()
 road_user_t::road_user_t(grund_t* bd, uint16 random) :
 	vehicle_base_t(bd ? bd->get_pos() : koord3d::invalid)
 {
+	assert(bd);
 	ribi_t::ribi road_ribi = bd->get_weg_ribi(road_wt);
 
 	weg_next = random;
@@ -109,7 +109,9 @@ road_user_t::road_user_t(grund_t* bd, uint16 random) :
 		pos_next = to->get_pos();
 	}
 	else {
-		pos_next = welt->lookup_kartenboden(get_pos().get_2d() + koord(direction))->get_pos();
+		pos_next = bd->get_pos();
+		// we have nowhere to go
+		time_to_life = 0;
 	}
 	set_owner( welt->get_public_player() );
 }
@@ -238,8 +240,8 @@ stringhashtable_tpl<const citycar_desc_t *> private_car_t::table;
 
 bool private_car_t::register_desc(const citycar_desc_t *desc)
 {
-	if(  table.remove(desc->get_name())  ) {
-		pakset_manager_t::doubled( "citycar", desc->get_name() );
+	if(const citycar_desc_t *old = table.remove(desc->get_name())  ) {
+		delete old;
 	}
 	table.put(desc->get_name(), desc);
 	return true;

@@ -684,7 +684,6 @@ bool roadsign_t::register_desc(roadsign_desc_t *desc)
 {
 	// avoid duplicates with same name
 	if(const roadsign_desc_t *old_desc = table.remove(desc->get_name())) {
-		pakset_manager_t::doubled( "roadsign", desc->get_name() );
 		tool_t::general_tool.remove( old_desc->get_builder() );
 		delete old_desc->get_builder();
 		delete old_desc;
@@ -762,7 +761,7 @@ const vector_tpl<const roadsign_desc_t*>& roadsign_t::get_available_signs(const 
 	const uint16 time = welt->get_timeline_year_month();
 	for(auto const& i : table) {
 		roadsign_desc_t const* const desc = i.value;
-		if(  desc->is_available(time)  &&  desc->get_wtyp()==wt) {
+		if (desc->is_available(time)  &&  desc->get_wtyp()==wt  &&  desc->get_builder()) {
 			dummy.append(desc);
 		}
 	}

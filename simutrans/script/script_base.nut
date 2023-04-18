@@ -234,23 +234,54 @@ class extend_get {
 
 }
 
+/////////////////////////////////////
+
+class coord {
+	x = -1
+	y = -1
+
+	constructor(_x, _y)  { x = _x; y = _y }
+	function _add(other) { return coord(x + other.x, y + other.y) }
+	function _sub(other) { return coord(x - other.x, y - other.y) }
+	function _mul(fac)   { return coord(x * fac, y * fac) }
+	function _div(fac)   { return coord(x / fac, y / fac) }
+	function _unm()      { return coord(-x, -y) }
+	function _typeof()   { return "coord" }
+	function _tostring() { return coord_to_string(this) }
+	function _save()     { return "coord(" + x + ", " + y + ")" }
+	function href(text)  { return "<a href='(" + x + ", " + y + ")'>" + text + "</a>" }
+}
+
+class coord3d extends coord {
+	z = -1
+
+	constructor(_x, _y, _z)  { x = _x; y = _y; z = _z }
+	function _add(other) { return coord3d(x + other.x, y + other.y, z + getz(other)) }
+	function _sub(other) { return coord3d(x - other.x, y - other.y, z - getz(other)) }
+	function _mul(fac)   { return coord3d(x * fac, y * fac, z * fac) }
+	function _div(fac)   { return coord3d(x / fac, y / fac, z / fac) }
+	function _unm()      { return coord3d(-x, -y, -z) }
+	function _typeof()   { return "coord3d" }
+	function _tostring() { return coord3d_to_string(this) }
+	function _save()     { return "coord3d(" + x + ", " + y + ", " + z + ")" }
+	function href(text)  { return "<a href='(" + x + ", " + y + ", " + z + ")'>" + text + "</a>" }
+
+	function getz(other) { return ("z" in other) ? other.z : 0 }
+}
+
 /**
  * class that contains data to get access to an in-game factory
  */
-class factory_x extends extend_get {
-	/// coordinates
-	x = -1
-	y = -1
+class factory_x extends coord {
+
+	_get = _extend_get
+	function _tostring() { return "factory_x@" + coord_to_string(this) }
 
 	/// input / output slots, will be filled by constructor
 	input = {}
 	output = {}
 
-	/// constructor will be overwritten by a native method
-	constructor(x_, y_) {
-		x = x_
-		y = y_
-	}
+	// constructor is implemented in c++
 }
 
 
@@ -296,6 +327,8 @@ class factory_list_x {
 class player_x extends extend_get {
 	nr = 0 /// player number
 
+	function _tostring() { return "player_x@" + nr }
+
 	constructor(n_) {
 		nr = n_
 	}
@@ -308,6 +341,8 @@ class player_x extends extend_get {
 class halt_x extends extend_get {
 	id = 0 /// halthandle_t
 
+	function _tostring() { return "halt_x@" + id }
+
 	constructor(i_) {
 		id = i_
 	}
@@ -319,6 +354,8 @@ class halt_x extends extend_get {
  */
 class line_x extends extend_get {
 	id = 0 /// linehandle_t
+
+	function _tostring() { return "line_x@" + id }
 
 	constructor(i_) {
 		id = i_
@@ -337,17 +374,10 @@ class line_list_x {
 /**
  * class that contains data to get access to a tile (grund_t)
  */
-class tile_x extends extend_get {
-	/// coordinates
-	x = -1
-	y = -1
-	z = -1
+class tile_x extends coord3d {
 
-	constructor(x_, y_, z_) {
-		x = x_
-		y = y_
-		z = z_
-	}
+	_get = _extend_get
+	function _tostring() { return "tile_x@" + coord3d_to_string(this) }
 
 	function get_objects()
 	{
@@ -371,15 +401,10 @@ class tile_object_list_x {
 /**
  * class that contains data to get access to a grid square (planquadrat_t)
  */
-class square_x extends extend_get {
-	/// coordinates
-	x = -1
-	y = -1
+class square_x extends coord {
 
-	constructor(x_, y_) {
-		x = x_
-		y = y_
-	}
+	_get = _extend_get
+	function _tostring() { return "square_x@" + coord_to_string(this) }
 }
 
 
@@ -399,6 +424,8 @@ class convoy_list_x {
  */
 class convoy_x extends extend_get {
 	id = 0 /// convoihandle_t
+
+	function _tostring() { return "convoy_x@" + id }
 
 	constructor(i_) {
 		id = i_
@@ -424,15 +451,11 @@ class city_list_x {
 /**
  * class that contains data to get access to a city
  */
-class city_x extends extend_get {
-	/// coordinates
-	x = -1
-	y = -1
+class city_x extends coord {
 
-	constructor(x_, y_) {
-		x = x_
-		y = y_
-	}
+	_get = _extend_get
+	function _tostring() { return "city_x@" + coord_to_string(this) }
+
 }
 
 /**
@@ -444,18 +467,16 @@ class settings {
 /**
  * base class of map objects (obj_t)
  */
-class map_object_x extends extend_get {
-	/// coordinates
-	x = -1
-	y = -1
-	z = -1
+class map_object_x extends coord3d {
+
+	_get = _extend_get
+	function _tostring() { return "map_object_x@" + coord_to_string(this) }
 }
 
-class schedule_entry_x {
-	/// coordinate
-	x = -1
-	y = -1
-	z = -1
+class schedule_entry_x extends coord3d {
+
+	function _tostring() { return "schedule_entry_x@" + coord3d_to_string(this) }
+
 	/// load percentage
 	load = 0
 	/// waiting
@@ -510,38 +531,6 @@ class time_ticks_x extends time_x {
 	next_month_ticks = 0
 }
 
-class coord {
-	x = -1
-	y = -1
-
-	constructor(_x, _y)  { x = _x; y = _y }
-	function _add(other) { return coord(x + other.x, y + other.y) }
-	function _sub(other) { return coord(x - other.x, y - other.y) }
-	function _mul(fac)   { return coord(x * fac, y * fac) }
-	function _div(fac)   { return coord(x / fac, y / fac) }
-	function _unm()      { return coord(-x, -y) }
-	function _typeof()   { return "coord" }
-	function _tostring() { return coord_to_string(this) }
-	function _save()     { return "coord(" + x + ", " + y + ")" }
-	function href(text)  { return "<a href='(" + x + ", " + y + ")'>" + text + "</a>" }
-}
-
-class coord3d extends coord {
-	z = -1
-
-	constructor(_x, _y, _z)  { x = _x; y = _y; z = _z }
-	function _add(other) { return coord3d(x + other.x, y + other.y, z + getz(other)) }
-	function _sub(other) { return coord3d(x - other.x, y - other.y, z - getz(other)) }
-	function _mul(fac)   { return coord3d(x * fac, y * fac, z * fac) }
-	function _div(fac)   { return coord3d(x / fac, y / fac, z / fac) }
-	function _unm()      { return coord3d(-x, -y, -z) }
-	function _typeof()   { return "coord3d" }
-	function _tostring() { return coord3d_to_string(this) }
-	function _save()     { return "coord3d(" + x + ", " + y + ", " + z + ")" }
-	function href(text)  { return "<a href='(" + x + ", " + y + ", " + z + ")'>" + text + "</a>" }
-
-	function getz(other) { return ("z" in other) ? other.z : 0 }
-}
 
 /**
  * The same metamethod magic as in the class extend_get.

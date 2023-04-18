@@ -12,8 +12,6 @@
 function test_way_tunnel_build_straight()
 {
 	local digger = command_x(tool_build_tunnel)
-	local raise = command_x(tool_raise_land)
-	local lower = command_x(tool_lower_land)
 	local remover = command_x(tool_remover)
 	local default_tunnel = tunnel_desc_x.get_available_tunnels(wt_road)[0]
 	local pl = player_x(0)
@@ -21,8 +19,8 @@ function test_way_tunnel_build_straight()
 	ASSERT_TRUE(default_tunnel != null)
 
 	{
-		ASSERT_EQUAL(raise.work(pl, coord3d(3, 2, 0)), null)
-		ASSERT_EQUAL(raise.work(pl, coord3d(4, 2, 0)), null)
+		ASSERT_EQUAL(command_x.grid_raise(pl, coord3d(3, 2, 0)), null)
+		ASSERT_EQUAL(command_x.grid_raise(pl, coord3d(4, 2, 0)), null)
 
 		digger.set_flags(2)
 		ASSERT_EQUAL(digger.work(pl, tile_x(3, 1, 0), default_tunnel.get_name()), null)
@@ -72,8 +70,8 @@ function test_way_tunnel_build_straight()
 	}
 
 	{
-		ASSERT_EQUAL(raise.work(pl, coord3d(3, 3, 0)), null)
-		ASSERT_EQUAL(raise.work(pl, coord3d(4, 3, 0)), null)
+		ASSERT_EQUAL(command_x.grid_raise(pl, coord3d(3, 3, 0)), null)
+		ASSERT_EQUAL(command_x.grid_raise(pl, coord3d(4, 3, 0)), null)
 
 		ASSERT_EQUAL(digger.work(pl, tile_x(3, 1, 0), default_tunnel.get_name()), null)
 
@@ -88,6 +86,16 @@ function test_way_tunnel_build_straight()
 				"........",
 				"........"
 			])
+
+		{
+			// test tunnel object
+			local t = tile_x(3, 1, 0)
+			local tunnel = t.find_object(mo_tunnel)
+
+			ASSERT_TRUE(tunnel != null)
+
+			ASSERT_EQUAL(tunnel.get_desc().get_name(), default_tunnel.get_name())
+		}
 	}
 
 	{
@@ -173,10 +181,10 @@ function test_way_tunnel_build_straight()
 	}
 
 	// clean up
-	ASSERT_EQUAL(lower.work(pl, coord3d(3, 2, 0)), null)
-	ASSERT_EQUAL(lower.work(pl, coord3d(3, 3, 0)), null)
-	ASSERT_EQUAL(lower.work(pl, coord3d(4, 2, 0)), null)
-	ASSERT_EQUAL(lower.work(pl, coord3d(4, 3, 0)), null)
+	ASSERT_EQUAL(command_x.grid_lower(pl, coord3d(3, 2, 0)), null)
+	ASSERT_EQUAL(command_x.grid_lower(pl, coord3d(3, 3, 0)), null)
+	ASSERT_EQUAL(command_x.grid_lower(pl, coord3d(4, 2, 0)), null)
+	ASSERT_EQUAL(command_x.grid_lower(pl, coord3d(4, 3, 0)), null)
 
 	RESET_ALL_PLAYER_FUNDS()
 }
@@ -185,8 +193,6 @@ function test_way_tunnel_build_straight()
 function test_way_tunnel_build_up_down()
 {
 	local digger = command_x(tool_build_tunnel)
-	local raise = command_x(tool_raise_land)
-	local lower = command_x(tool_lower_land)
 	local setslope = command_x.set_slope
 	local remover = command_x(tool_remover)
 	local default_tunnel = tunnel_desc_x.get_available_tunnels(wt_rail)[0]
@@ -194,12 +200,12 @@ function test_way_tunnel_build_up_down()
 
 	ASSERT_TRUE(default_tunnel != null)
 
-	ASSERT_EQUAL(raise.work(pl, coord3d(1, 1, 0)), null)
-	ASSERT_EQUAL(raise.work(pl, coord3d(2, 1, 0)), null)
-	ASSERT_EQUAL(raise.work(pl, coord3d(1, 2, 0)), null)
-	ASSERT_EQUAL(raise.work(pl, coord3d(2, 2, 0)), null)
-	ASSERT_EQUAL(raise.work(pl, coord3d(1, 3, 0)), null)
-	ASSERT_EQUAL(raise.work(pl, coord3d(2, 3, 0)), null)
+	ASSERT_EQUAL(command_x.grid_raise(pl, coord3d(1, 1, 0)), null)
+	ASSERT_EQUAL(command_x.grid_raise(pl, coord3d(2, 1, 0)), null)
+	ASSERT_EQUAL(command_x.grid_raise(pl, coord3d(1, 2, 0)), null)
+	ASSERT_EQUAL(command_x.grid_raise(pl, coord3d(2, 2, 0)), null)
+	ASSERT_EQUAL(command_x.grid_raise(pl, coord3d(1, 3, 0)), null)
+	ASSERT_EQUAL(command_x.grid_raise(pl, coord3d(2, 3, 0)), null)
 
 	digger.set_flags(2) // ctrl
 	ASSERT_EQUAL(digger.work(pl, coord3d(1, 0, 0), default_tunnel.get_name()), null)
@@ -338,10 +344,10 @@ function test_way_tunnel_build_up_down()
 
 	// try building double slope up, rail does not support double slopes
 	{
-		ASSERT_EQUAL(raise.work(pl, coord3d(1, 2, 1)), null)
-		ASSERT_EQUAL(raise.work(pl, coord3d(2, 2, 1)), null)
-		ASSERT_EQUAL(raise.work(pl, coord3d(1, 3, 1)), null)
-		ASSERT_EQUAL(raise.work(pl, coord3d(2, 3, 1)), null)
+		ASSERT_EQUAL(command_x.grid_raise(pl, coord3d(1, 2, 1)), null)
+		ASSERT_EQUAL(command_x.grid_raise(pl, coord3d(2, 2, 1)), null)
+		ASSERT_EQUAL(command_x.grid_raise(pl, coord3d(1, 3, 1)), null)
+		ASSERT_EQUAL(command_x.grid_raise(pl, coord3d(2, 3, 1)), null)
 
 		local old_maint = pl.get_current_maintenance()
 		ASSERT_EQUAL(setslope(pl, coord3d(1, 1, 0), slope.all_up_slope), "")
@@ -371,20 +377,20 @@ function test_way_tunnel_build_up_down()
 
 		ASSERT_EQUAL(pl.get_current_maintenance(), old_maint)
 
-		ASSERT_EQUAL(lower.work(pl, coord3d(1, 2, 2)), null)
-		ASSERT_EQUAL(lower.work(pl, coord3d(2, 2, 2)), null)
-		ASSERT_EQUAL(lower.work(pl, coord3d(1, 3, 2)), null)
-		ASSERT_EQUAL(lower.work(pl, coord3d(2, 3, 2)), null)
+		ASSERT_EQUAL(command_x.grid_lower(pl, coord3d(1, 2, 2)), null)
+		ASSERT_EQUAL(command_x.grid_lower(pl, coord3d(2, 2, 2)), null)
+		ASSERT_EQUAL(command_x.grid_lower(pl, coord3d(1, 3, 2)), null)
+		ASSERT_EQUAL(command_x.grid_lower(pl, coord3d(2, 3, 2)), null)
 	}
 
 	// clean up
 	ASSERT_EQUAL(command_x(tool_remover).work(pl, coord3d(1, 0, 0)), null)
-	ASSERT_EQUAL(lower.work(pl, coord3d(1, 1, 1)), null)
-	ASSERT_EQUAL(lower.work(pl, coord3d(2, 1, 1)), null)
-	ASSERT_EQUAL(lower.work(pl, coord3d(1, 2, 1)), null)
-	ASSERT_EQUAL(lower.work(pl, coord3d(2, 2, 1)), null)
-	ASSERT_EQUAL(lower.work(pl, coord3d(1, 3, 1)), null)
-	ASSERT_EQUAL(lower.work(pl, coord3d(2, 3, 1)), null)
+	ASSERT_EQUAL(command_x.grid_lower(pl, coord3d(1, 1, 1)), null)
+	ASSERT_EQUAL(command_x.grid_lower(pl, coord3d(2, 1, 1)), null)
+	ASSERT_EQUAL(command_x.grid_lower(pl, coord3d(1, 2, 1)), null)
+	ASSERT_EQUAL(command_x.grid_lower(pl, coord3d(2, 2, 1)), null)
+	ASSERT_EQUAL(command_x.grid_lower(pl, coord3d(1, 3, 1)), null)
+	ASSERT_EQUAL(command_x.grid_lower(pl, coord3d(2, 3, 1)), null)
 
 	RESET_ALL_PLAYER_FUNDS()
 }
@@ -396,13 +402,11 @@ function test_way_tunnel_make_public()
 	local public_pl = player_x(1)
 	local tunnel_desc = tunnel_desc_x.get_available_tunnels(wt_road)[0]
 	local makepublic  = command_x(tool_make_stop_public)
-	local raise       = command_x(tool_raise_land)
-	local lower       = command_x(tool_lower_land)
 
-	ASSERT_EQUAL(raise.work(public_pl, coord3d(4, 3, 0)), null)
-	ASSERT_EQUAL(raise.work(public_pl, coord3d(5, 3, 0)), null)
-	ASSERT_EQUAL(raise.work(public_pl, coord3d(4, 4, 0)), null)
-	ASSERT_EQUAL(raise.work(public_pl, coord3d(5, 4, 0)), null)
+	ASSERT_EQUAL(command_x.grid_raise(public_pl, coord3d(4, 3, 0)), null)
+	ASSERT_EQUAL(command_x.grid_raise(public_pl, coord3d(5, 3, 0)), null)
+	ASSERT_EQUAL(command_x.grid_raise(public_pl, coord3d(4, 4, 0)), null)
+	ASSERT_EQUAL(command_x.grid_raise(public_pl, coord3d(5, 4, 0)), null)
 
 	ASSERT_EQUAL(command_x(tool_build_tunnel).work(pl, coord3d(4, 2, 0), tunnel_desc.get_name()), null)
 
@@ -447,9 +451,9 @@ function test_way_tunnel_make_public()
 	// clean up
 	ASSERT_EQUAL(command_x(tool_remove_way).work(public_pl, coord3d(4, 2, 0), coord3d(4, 4, 0), "" + wt_road), null)
 
-	ASSERT_EQUAL(lower.work(public_pl, coord3d(4, 3, 1)), null)
-	ASSERT_EQUAL(lower.work(public_pl, coord3d(5, 3, 1)), null)
-	ASSERT_EQUAL(lower.work(public_pl, coord3d(4, 4, 1)), null)
-	ASSERT_EQUAL(lower.work(public_pl, coord3d(5, 4, 1)), null)
+	ASSERT_EQUAL(command_x.grid_lower(public_pl, coord3d(4, 3, 1)), null)
+	ASSERT_EQUAL(command_x.grid_lower(public_pl, coord3d(5, 3, 1)), null)
+	ASSERT_EQUAL(command_x.grid_lower(public_pl, coord3d(4, 4, 1)), null)
+	ASSERT_EQUAL(command_x.grid_lower(public_pl, coord3d(5, 4, 1)), null)
 	RESET_ALL_PLAYER_FUNDS()
 }
